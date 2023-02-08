@@ -1,0 +1,26 @@
+@import '../../../styles/_variables.scss';
+.button {
+    background-color: $primary-color;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.button:hover {
+    transform: scale(1.05);
+}
+
+.lg__button {
+    font-size: 1.1rem;
+    min-width: 64px;
+    padding: 5px 15px;
+}
+
+.bg__none__button {
+    background: transparent;
+}
+
+.bg__normal__button {
+    background-color: $primary-color;
+}
