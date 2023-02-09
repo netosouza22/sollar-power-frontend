@@ -1,14 +1,15 @@
 import Button from '@/components/base/Button';
+import { api } from '@/services/api';
+import { states } from '@/utils/states';
+import { AuthContext } from '@/_contexts/authContext';
 import { yupResolver } from '@hookform/resolvers/yup';
 import axios from 'axios';
-import { FocusEvent, useEffect } from 'react';
+import { FocusEvent, useContext, useEffect } from 'react';
 import { Col, Container, Form, Modal, Row } from 'react-bootstrap';
 import { Controller, SubmitHandler, useForm } from 'react-hook-form';
+// const a from "@/";
 import { IMaskInput } from 'react-imask';
 import * as yup from 'yup';
-
-const token =
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MiwibmFtZSI6IkFuYWlzIiwiaWF0IjoxNjc1ODg2NjAxLCJleHAiOjE2NzU4OTAyMDF9.1TFilADLpJ4cA4Boj5pxjIHfPzuxbMeH6SACqdxOc6k';
 
 const schema = yup
     .object({
@@ -29,11 +30,29 @@ const schema = yup
 type FormDataProject = yup.InferType<typeof schema>;
 
 interface ModalProject {
+    id: number | undefined;
+    accessType: string;
     showModal: boolean;
     hideModal: () => void;
+    handleReload: () => void;
 }
 
-const ModalProject = ({ showModal, hideModal }: ModalProject) => {
+const defaultProjectValues = {
+    client_cellphone: '',
+    client_name: '',
+    company_distribution: '',
+    total_potency: 0,
+    cep: '',
+    state: '',
+    city: '',
+    neighborhood: '',
+    address: '',
+    number: 0,
+    file: 'asdas',
+};
+
+const ModalProject = ({ showModal, hideModal, handleReload, id, accessType }: ModalProject) => {
+    const { userInfo } = useContext(AuthContext);
     const {
         reset,
         register,
@@ -45,35 +64,23 @@ const ModalProject = ({ showModal, hideModal }: ModalProject) => {
         mode: 'all',
         resolver: yupResolver(schema),
         defaultValues: {
-            file: 'qeqwe',
+            ...defaultProjectValues,
         },
     });
 
     useEffect(() => {
-        let a = 'b';
         const getProject = async () => {
-            try {
-                const response: any = await axios.get('http://localhost:8080/projects/1', {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        'Content-Type': 'application/json',
-                    },
-                });
-
-                reset({ ...response.data.project });
-            } catch (err) {
-                console.log(err);
-            }
+            api.get(`/projects/${id}`)
+                .then((res) => reset(res.data.project))
+                .catch((err) => console.log(err));
         };
 
-        if (a === 'a') {
+        if (accessType === 'edit') {
             getProject();
         }
-    }, [reset]);
+    }, [accessType, id, reset]);
 
-    const handleCepInformation = async (
-        e: FocusEvent<HTMLInputElement | HTMLTextAreaElement, Element>,
-    ) => {
+    const handleCepInformation = async (e: FocusEvent<HTMLInputElement | HTMLTextAreaElement, Element>) => {
         const valueCep = e.target.value;
 
         if (valueCep.length < 10) {
@@ -92,30 +99,47 @@ const ModalProject = ({ showModal, hideModal }: ModalProject) => {
         } catch (err) {}
     };
 
+    const handleCloseModal = () => {
+        reset({ ...defaultProjectValues });
+        hideModal();
+    };
+
     const onSubmit: SubmitHandler<FormDataProject> = async (data) => {
-        try {
-            const response = await axios.put('http://localhost:8080/projects/1', data, {
-                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-            });
-
-            if (response.status === 201) {
-                reset();
-                hideModal();
-            }
-        } catch (err: any) {
-            if (err.response.data.errors) {
-                console.log(
-                    '🚀 ~ file: index.tsx:59 ~ constonSubmit:SubmitHandler<FormDataProject>= ~ err',
-                    err.response.data.errors.default,
-                );
-            }
-
-            console.log(err.response.data.message);
+        data.file = 'asdasd';
+        console.log('🚀 ~ file: index.tsx:107 ~ constonSubmit:SubmitHandler<FormDataProject>= ~ data', data);
+        if (accessType === 'create') {
+            await api
+                .post(`/projects/${userInfo.id}`, data)
+                .then((res) => {
+                    if (res.status === 201) {
+                        reset({ ...defaultProjectValues });
+                        hideModal();
+                        handleReload();
+                    }
+                })
+                .catch((err) => {
+                    if (err.response.data.errors) {
+                    }
+                });
+        } else {
+            await api
+                .put(`/projects/${id}`, data)
+                .then((res) => {
+                    if (res.status === 201) {
+                        reset({ ...defaultProjectValues });
+                        hideModal();
+                        handleReload();
+                    }
+                })
+                .catch((err) => {
+                    if (err.response.data.errors) {
+                    }
+                });
         }
     };
 
     return (
-        <Modal show={showModal} onHide={() => hideModal()} size="lg">
+        <Modal show={showModal} onHide={() => handleCloseModal()} size="lg">
             <Form onSubmit={handleSubmit(onSubmit)}>
                 <Modal.Header closeButton>
                     <Modal.Title>Criar Projeto</Modal.Title>
@@ -124,9 +148,7 @@ const ModalProject = ({ showModal, hideModal }: ModalProject) => {
                     <Container className="my-3">
                         <Row>
                             <Col className="my-1">
-                                <Form.Label htmlFor="company_distribution">
-                                    Concessionária
-                                </Form.Label>
+                                <Form.Label htmlFor="company_distribution">Concessionária</Form.Label>
 
                                 <Form.Control
                                     {...register('company_distribution')}
@@ -138,14 +160,14 @@ const ModalProject = ({ showModal, hideModal }: ModalProject) => {
                                 />
                             </Col>
                             <Col className="my-1">
-                                <Form.Label htmlFor="total_potency">
-                                    Potência Total em Volts
-                                </Form.Label>
+                                <Form.Label htmlFor="total_potency">Potência Total em Volts</Form.Label>
                                 <Form.Control
                                     {...register('total_potency')}
                                     className={`${errors.total_potency ? 'is-invalid' : ''}`}
                                     autoComplete="off"
                                     type="number"
+                                    step="0.01"
+                                    min="0"
                                     id="total_potency"
                                     aria-describedby="passwordHelpBlock"
                                 />
@@ -169,18 +191,12 @@ const ModalProject = ({ showModal, hideModal }: ModalProject) => {
                                 <Controller
                                     control={control}
                                     name="client_cellphone"
-                                    render={({
-                                        field: { onChange, onBlur, value, name, ref },
-                                        fieldState: { invalid, isTouched, isDirty, error },
-                                        formState,
-                                    }) => (
+                                    render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid, isTouched, isDirty, error }, formState }) => (
                                         <Form.Control
                                             as={IMaskInput}
                                             mask="(00) 00000-0000"
                                             value={value}
-                                            className={`${
-                                                errors.client_cellphone ? 'is-invalid' : ''
-                                            }`}
+                                            className={`${errors.client_cellphone ? 'is-invalid' : ''}`}
                                             onChange={onChange}
                                             type="text"
                                             id="client_cellphone"
@@ -191,7 +207,7 @@ const ModalProject = ({ showModal, hideModal }: ModalProject) => {
                             </Col>
                         </Row>
                         <Row>
-                            <Col className="my-1" xs={3}>
+                            <Col className="my-1" xs={2}>
                                 <Form.Label htmlFor="cep">CEP</Form.Label>
                                 <Controller
                                     control={control}
@@ -211,27 +227,21 @@ const ModalProject = ({ showModal, hideModal }: ModalProject) => {
                                     )}
                                 />
                             </Col>
-                            <Col className="my-1" xs={3}>
+                            <Col className="my-1" xs={4}>
                                 <Form.Label htmlFor="state">Estado</Form.Label>
-                                <Form.Control
-                                    {...register('state')}
-                                    className={`${errors.state ? 'is-invalid' : ''}`}
-                                    autoComplete="off"
-                                    type="text"
-                                    id="state"
-                                    aria-describedby="passwordHelpBlock"
-                                />
+                                <Form.Select {...register('state')} className={`${errors.state ? 'is-invalid' : ''}`} autoComplete="off" id="state" aria-describedby="passwordHelpBlock">
+                                    {states.map((state) => {
+                                        return (
+                                            <option key={state.value} value={state.value}>
+                                                {state.label}
+                                            </option>
+                                        );
+                                    })}
+                                </Form.Select>
                             </Col>
                             <Col className="my-1" xs={6}>
                                 <Form.Label htmlFor="city">Cidade</Form.Label>
-                                <Form.Control
-                                    {...register('city')}
-                                    autoComplete="off"
-                                    className={`${errors.city ? 'is-invalid' : ''}`}
-                                    type="text"
-                                    id="city"
-                                    aria-describedby="passwordHelpBlock"
-                                />
+                                <Form.Control {...register('city')} autoComplete="off" className={`${errors.city ? 'is-invalid' : ''}`} type="text" id="city" aria-describedby="passwordHelpBlock" />
                             </Col>
                         </Row>
                         <Row>
@@ -264,6 +274,7 @@ const ModalProject = ({ showModal, hideModal }: ModalProject) => {
                                     className={`${errors.number ? 'is-invalid' : ''}`}
                                     autoComplete="off"
                                     type="number"
+                                    min="0"
                                     id="number"
                                     aria-describedby="passwordHelpBlock"
                                 />
