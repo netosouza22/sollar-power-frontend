@@ -39,7 +39,7 @@ export function AuthProvider({ children }: any) {
             const { auth_token } = parseCookies();
 
             if (!!auth_token) {
-                router.push('/home');
+                router.push(router.pathname);
                 setIsAuthenticated(true);
                 setIsLoading(false);
             } else {
