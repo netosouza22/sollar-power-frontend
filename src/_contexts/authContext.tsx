@@ -37,6 +37,11 @@ export function AuthProvider({ children }: any) {
     useEffect(() => {
         const checkToken = () => {
             const { auth_token } = parseCookies();
+            console.log('🚀 ~ file: authContext.tsx:40 ~ checkToken ~ auth_token', auth_token);
+
+            api.get('/checkAuth')
+                .then((res) => setUserInfo(res.data.user))
+                .catch((err) => router.push('/login'));
 
             if (!!auth_token) {
                 router.push(router.pathname);
@@ -78,7 +83,7 @@ export function AuthProvider({ children }: any) {
             sameSite: 'lax',
         });
 
-        router.push('./home');
+        router.push('/home');
 
         return true;
     };
