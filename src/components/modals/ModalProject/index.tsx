@@ -22,8 +22,13 @@ const schema = yup
         city: yup.string().required('Campo Obrigatório!'),
         neighborhood: yup.string().required('Campo Obrigatório!'),
         address: yup.string().required('Campo Obrigatório!'),
-        number: yup.number().typeError('Número inválido'),
-        file: yup.string(),
+        number: yup.number().typeError('Número inválido!'),
+        file: yup.mixed().test('file', 'Campo arquivo obrigatório!', (value) => {
+            if (value.length > 0) {
+                return true;
+            }
+            return false;
+        }),
     })
     .required();
 
@@ -48,11 +53,13 @@ const defaultProjectValues = {
     neighborhood: '',
     address: '',
     number: 0,
-    file: 'asdas',
+    file: '',
 };
 
 const ModalProject = ({ showModal, hideModal, handleReload, id, accessType }: ModalProject) => {
     const { userInfo } = useContext(AuthContext);
+    console.log('🚀 ~ file: index.tsx:61 ~ ModalProject ~ userInfo', userInfo);
+
     const {
         reset,
         register,
@@ -71,7 +78,10 @@ const ModalProject = ({ showModal, hideModal, handleReload, id, accessType }: Mo
     useEffect(() => {
         const getProject = async () => {
             api.get(`/projects/${id}`)
-                .then((res) => reset(res.data.project))
+                .then((res) => {
+                    reset(res.data.project);
+                    console.log(res.data);
+                })
                 .catch((err) => console.log(err));
         };
 
@@ -105,11 +115,22 @@ const ModalProject = ({ showModal, hideModal, handleReload, id, accessType }: Mo
     };
 
     const onSubmit: SubmitHandler<FormDataProject> = async (data) => {
-        data.file = 'asdasd';
-        console.log('🚀 ~ file: index.tsx:107 ~ constonSubmit:SubmitHandler<FormDataProject>= ~ data', data);
+        const formData = new FormData();
+
+        for (const property in data) {
+            if (property === 'file') {
+                let file = data.file[0];
+                formData.append(`${property}`, file);
+            }
+
+            if (property !== 'file') {
+                formData.append(`${property}`, data[property as keyof typeof data]);
+            }
+        }
+
         if (accessType === 'create') {
             await api
-                .post(`/projects/${userInfo.id}`, data)
+                .post(`/projects/${userInfo?.id}`, formData, { headers: { 'content-type': 'multipart/form-data' } })
                 .then((res) => {
                     if (res.status === 201) {
                         reset({ ...defaultProjectValues });
@@ -117,10 +138,7 @@ const ModalProject = ({ showModal, hideModal, handleReload, id, accessType }: Mo
                         handleReload();
                     }
                 })
-                .catch((err) => {
-                    if (err.response.data.errors) {
-                    }
-                });
+                .catch((err) => {});
         } else {
             await api
                 .put(`/projects/${id}`, data)
@@ -173,6 +191,12 @@ const ModalProject = ({ showModal, hideModal, handleReload, id, accessType }: Mo
                                 />
                             </Col>
                         </Row>
+                        <Row className="my-1">
+                            <Col>
+                                <Form.Label htmlFor="file">Arquivo do Projeto</Form.Label>
+                                <Form.Control {...register('file')} className={`${errors.file ? 'is-invalid' : ''}`} autoComplete="off" type="file" id="file" aria-describedby="file" />
+                            </Col>
+                        </Row>
                         <Row>
                             <Col className="my-1">
                                 <Form.Label htmlFor="client_name">Nome do Cliente</Form.Label>
@@ -207,7 +231,7 @@ const ModalProject = ({ showModal, hideModal, handleReload, id, accessType }: Mo
                             </Col>
                         </Row>
                         <Row>
-                            <Col className="my-1" xs={2}>
+                            <Col className="my-1" xs={3}>
                                 <Form.Label htmlFor="cep">CEP</Form.Label>
                                 <Controller
                                     control={control}
@@ -227,7 +251,7 @@ const ModalProject = ({ showModal, hideModal, handleReload, id, accessType }: Mo
                                     )}
                                 />
                             </Col>
-                            <Col className="my-1" xs={4}>
+                            <Col className="my-1" xs={3}>
                                 <Form.Label htmlFor="state">Estado</Form.Label>
                                 <Form.Select {...register('state')} className={`${errors.state ? 'is-invalid' : ''}`} autoComplete="off" id="state" aria-describedby="passwordHelpBlock">
                                     {states.map((state) => {
