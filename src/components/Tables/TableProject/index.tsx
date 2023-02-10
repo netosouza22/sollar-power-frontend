@@ -36,7 +36,6 @@ const TableProject = () => {
     const [idProject, setIdProject] = useState<number>(-1);
     const [accessType, setAccessType] = useState('create');
     const [filter, setFilter] = useState('');
-    console.log('🚀 ~ file: index.tsx:39 ~ TableProject ~ filter', filter);
 
     const [reload, setReload] = useState(false);
     const [projects, setProjects] = useState<Projects[]>([]);
@@ -114,10 +113,10 @@ const TableProject = () => {
                             </Form.Select>
 
                             <div className={styles.t__filter__buttons}>
-                                <Button size="md" onClick={handleFilter}>
+                                <Button size="md" onClick={() => handleFilter()}>
                                     Filtrar
                                 </Button>
-                                <Button size="md" onClick={resetFilter}>
+                                <Button size="md" onClick={() => resetFilter()}>
                                     Limpar
                                 </Button>
                             </div>
@@ -151,7 +150,11 @@ const TableProject = () => {
                                     <td className={styles.table__td}>{item.total_potency}</td>
                                     <td className={styles.table__td}>{item.state}</td>
                                     <td className={styles.table__td}>{item.city}</td>
-                                    <td className={styles.table__td}>{item.city}</td>
+                                    <td className={styles.table__td}>
+                                        <a href={item.file} target="_blank" rel="noreferrer" download={true}>
+                                            arquivo
+                                        </a>
+                                    </td>
                                     <td className={styles.table__td}>
                                         <div className={styles.td__group__button}>
                                             <Button bg="none" onClick={() => handleDeleteProject(Number(item.id))}>
