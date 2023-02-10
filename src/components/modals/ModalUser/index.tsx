@@ -1,165 +1,210 @@
 import Button from '@/components/base/Button';
+import { api } from '@/services/api';
+import { states } from '@/utils/states';
+import { AuthContext } from '@/_contexts/authContext';
 import { yupResolver } from '@hookform/resolvers/yup';
 import axios from 'axios';
-import { useEffect, useState } from 'react';
+import { FocusEvent, useContext, useEffect } from 'react';
 import { Col, Container, Form, Modal, Row } from 'react-bootstrap';
 import { Controller, SubmitHandler, useForm } from 'react-hook-form';
 import { IMaskInput } from 'react-imask';
+import { toast } from 'react-toastify';
 import * as yup from 'yup';
 
-const token =
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MiwibmFtZSI6IkFuYWlzIiwiaWF0IjoxNjc1ODgyNjIwLCJleHAiOjE2NzU4ODYyMjB9.FVIDsxsUZuMXufBjyQnsyxWFTL2B3hT8tEVxHyniWLo';
+interface ModalUser {
+    id: number | undefined;
+    accessType: string;
+    showModal: boolean;
+    hideModal: () => void;
+    handleReload: () => void;
+}
+
+const defaultUserValues: FormDataUser = {
+    isCreate: false,
+    name: '',
+    cpf: '',
+    email: '',
+    cellphone: '',
+    cep: '',
+    password: '',
+    state: '',
+    city: '',
+    neighborhood: '',
+    address: '',
+    number: 0,
+};
 
 const schema = yup
     .object({
+        isCreate: yup.bool(),
         cellphone: yup.string().required('Campo Obrigatório!'),
         name: yup.string().required('Campo Obrigatório!'),
         cpf: yup.string().required('Campo Obrigatório!'),
         email: yup.string().email().required('Campo Obrigatório!'),
+        password: yup.string().when('isCreate', {
+            is: true,
+            then: yup.string().required('Campo Senha necessário!'),
+        }),
         cep: yup.string().required('Campo Obrigatório!'),
         state: yup.string().required('Campo Obrigatório!'),
         city: yup.string().required('Campo Obrigatório!'),
         neighborhood: yup.string().required('Campo Obrigatório!'),
         address: yup.string().required('Campo Obrigatório!'),
         number: yup.number().typeError('Número inválido'),
-        file: yup.string(),
     })
     .required();
 
-type FormDataProject = yup.InferType<typeof schema>;
+type FormDataUser = yup.InferType<typeof schema>;
 
-const ModalProject = () => {
+const ModalUser = ({ showModal, hideModal, handleReload, id, accessType }: ModalUser) => {
+    const { userInfo } = useContext(AuthContext);
     const {
         reset,
         register,
         handleSubmit,
+        setValue,
         control,
         formState: { errors },
-    } = useForm<FormDataProject>({
+    } = useForm<FormDataUser>({
         resolver: yupResolver(schema),
     });
 
-    const [defaultValueProjet, setDefaultValueProject] = useState<any>([]);
-
-    console.log(errors);
-
     useEffect(() => {
-        const getProject = async () => {
-            try {
-                const response: any = await axios.get('http://localhost:8080/projects/2', {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        'Content-Type': 'application/json',
-                    },
-                });
-
-                console.log(
-                    '🚀 ~ file: index.tsx:55 ~ getProject ~ response',
-                    response.data.project,
-                );
-
-                reset({ ...response.data.project });
-            } catch (err) {
-                console.log(err);
-            }
+        const getUser = async () => {
+            await api
+                .get(`/users/${Number(id)}`)
+                .then((res) => {
+                    reset(res?.data.user);
+                    console.log(res?.data.user);
+                })
+                .catch((err) => console.log(err));
         };
+        if (accessType === 'edit') {
+            getUser();
+        }
+    }, [reset, id, accessType]);
 
-        getProject();
-    }, [reset]);
+    const handleCepInformation = async (e: FocusEvent<HTMLInputElement | HTMLTextAreaElement, Element>) => {
+        const valueCep = e.target.value;
 
-    const onSubmit: SubmitHandler<FormDataProject> = async (data) => {
+        if (valueCep.length < 10) {
+            return;
+        }
+
+        const pureValueCep = valueCep.replace(/[.-]/g, '');
+
         try {
-            const response = await axios.put('http://localhost:8080/projects/2', data, {
-                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-            });
+            const response = await axios.get(`https://viacep.com.br/ws/${pureValueCep}/json/ `);
 
-            console.log(response.status);
-        } catch (err: any) {
-            if (err.response.data.errors) {
-                console.log(
-                    '🚀 ~ file: index.tsx:59 ~ constonSubmit:SubmitHandler<FormDataProject>= ~ err',
-                    err.response.data.errors.default,
-                );
-            }
+            setValue('state', response.data.uf);
+            setValue('city', response.data.localidade);
+            setValue('neighborhood', response.data.bairro);
+            setValue('address', response.data.logradouro);
+        } catch (err) {}
+    };
 
-            console.log(err.response.data.message);
+    const handleCloseModal = () => {
+        reset({ ...defaultUserValues });
+        hideModal();
+    };
+
+    const onSubmit: SubmitHandler<FormDataUser> = async (data) => {
+        if (accessType === 'create') {
+            await api
+                .post(`/users`, data)
+                .then((res) => {
+                    if (res.status === 201) {
+                        reset({ ...defaultUserValues });
+                        hideModal();
+                        handleReload();
+                    }
+                })
+                .catch((err) => {});
+        } else {
+            delete data.isCreate;
+            delete data.password;
+
+            await api
+                .put(`/users/${id}`, data)
+                .then((res) => {
+                    if (res.status === 201) {
+                        toast.error('Usuário criado com sucesso!', {
+                            position: toast.POSITION.TOP_RIGHT,
+                        });
+                        hideModal();
+                        handleReload();
+                    }
+                })
+                .catch((err) => {
+                    toast.error('Ocorreu um erro ao criar o usuário!', {
+                        position: toast.POSITION.TOP_RIGHT,
+                    });
+                });
         }
     };
 
     return (
-        <Modal show={true} size="lg">
+        <Modal show={showModal} onHide={handleCloseModal} size="lg">
             <Form onSubmit={handleSubmit(onSubmit)}>
                 <Modal.Header closeButton>
-                    <Modal.Title>Criar Projeto</Modal.Title>
+                    <Modal.Title>Adicionar Usuário</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
                     <Container className="my-3">
                         <Row>
                             <Col className="my-1">
-                                <Form.Label htmlFor="company_distribution">
-                                    Concessionária
-                                </Form.Label>
+                                <Form.Label htmlFor="name">Nome</Form.Label>
 
-                                <Form.Control
-                                    {...register('company_distribution')}
-                                    className={`${errors.company_distribution ? 'is-invalid' : ''}`}
-                                    // autoComplete="off"
-                                    type="text"
-                                    id="company_distribution"
-                                    aria-describedby="passwordHelpBlock"
-                                />
+                                <Form.Control {...register('name')} className={`${errors.name ? 'is-invalid' : ''}`} type="text" id="name" aria-describedby="passwordHelpBlock" />
                             </Col>
                             <Col className="my-1">
-                                <Form.Label htmlFor="total_potency">
-                                    Potência Total em Volts
-                                </Form.Label>
-                                <Form.Control
-                                    {...register('total_potency')}
-                                    className={`${errors.total_potency ? 'is-invalid' : ''}`}
-                                    autoComplete="off"
-                                    type="number"
-                                    id="total_potency"
-                                    aria-describedby="passwordHelpBlock"
+                                <Form.Label htmlFor="cpf">CPF</Form.Label>
+                                <Controller
+                                    control={control}
+                                    name="cpf"
+                                    render={({ field: { onChange, onBlur, value, name, ref } }) => (
+                                        <Form.Control
+                                            as={IMaskInput}
+                                            mask="000.000.000-00"
+                                            className={`${errors.cpf ? 'is-invalid' : ''}`}
+                                            onChange={onChange}
+                                            value={value}
+                                            type="text"
+                                            id="cpf"
+                                            aria-describedby="passwordHelpBlock"
+                                        />
+                                    )}
                                 />
                             </Col>
                         </Row>
                         <Row>
                             <Col className="my-1">
-                                <Form.Label htmlFor="client_name">Nome do Cliente</Form.Label>
-                                <Form.Control
-                                    {...register('client_name')}
-                                    className={`${errors.client_name ? 'is-invalid' : ''}`}
-                                    autoComplete="off"
-                                    type="text"
-                                    id="client_name"
-                                    aria-describedby="passwordHelpBlock"
-                                />
+                                <Form.Label htmlFor="email">Email</Form.Label>
+                                <Form.Control {...register('email')} className={`${errors.email ? 'is-invalid' : ''}`} autoComplete="off" type="email" id="email" aria-describedby="email" />
                             </Col>
                             <Col className="my-1">
                                 <Form.Label htmlFor="client_cellphone">N° do Cliente</Form.Label>
 
                                 <Controller
                                     control={control}
-                                    name="client_cellphone"
-                                    render={({
-                                        field: { onChange, onBlur, value, name, ref },
-                                        fieldState: { invalid, isTouched, isDirty, error },
-                                        formState,
-                                    }) => (
+                                    name="cellphone"
+                                    render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid, isTouched, isDirty, error }, formState }) => (
                                         <Form.Control
                                             as={IMaskInput}
                                             mask="(00) 00000-0000"
                                             value={value}
-                                            className={`${
-                                                errors.client_cellphone ? 'is-invalid' : ''
-                                            }`}
+                                            className={`${errors.cellphone ? 'is-invalid' : ''}`}
                                             onChange={onChange}
                                             type="text"
-                                            id="client_cellphone"
+                                            id="cellphone"
                                             aria-describedby="passwordHelpBlock"
                                         />
                                     )}
                                 />
+                            </Col>
+                            <Col className="my-1">
+                                <Form.Label htmlFor="password">Password</Form.Label>
+                                <Form.Control {...register('password')} className={`${errors.password ? 'is-invalid' : ''}`} autoComplete="off" type="password" id="email" aria-describedby="email" />
                             </Col>
                         </Row>
                         <Row>
@@ -174,7 +219,9 @@ const ModalProject = () => {
                                             mask="00.000-000"
                                             className={`${errors.cep ? 'is-invalid' : ''}`}
                                             onChange={onChange}
+                                            onBlur={(e) => handleCepInformation(e)}
                                             type="text"
+                                            value={value}
                                             id="client_cellphone"
                                             aria-describedby="passwordHelpBlock"
                                         />
@@ -183,25 +230,19 @@ const ModalProject = () => {
                             </Col>
                             <Col className="my-1" xs={3}>
                                 <Form.Label htmlFor="state">Estado</Form.Label>
-                                <Form.Control
-                                    {...register('state')}
-                                    className={`${errors.state ? 'is-invalid' : ''}`}
-                                    autoComplete="off"
-                                    type="text"
-                                    id="state"
-                                    aria-describedby="passwordHelpBlock"
-                                />
+                                <Form.Select {...register('state')} className={`${errors.state ? 'is-invalid' : ''}`} autoComplete="off" id="state" aria-describedby="passwordHelpBlock">
+                                    {states.map((state: any) => {
+                                        return (
+                                            <option key={state.value} value={state.value}>
+                                                {state.label}
+                                            </option>
+                                        );
+                                    })}
+                                </Form.Select>
                             </Col>
                             <Col className="my-1" xs={6}>
                                 <Form.Label htmlFor="city">Cidade</Form.Label>
-                                <Form.Control
-                                    {...register('city')}
-                                    autoComplete="off"
-                                    className={`${errors.city ? 'is-invalid' : ''}`}
-                                    type="text"
-                                    id="city"
-                                    aria-describedby="passwordHelpBlock"
-                                />
+                                <Form.Control {...register('city')} autoComplete="off" className={`${errors.city ? 'is-invalid' : ''}`} type="text" id="city" aria-describedby="passwordHelpBlock" />
                             </Col>
                         </Row>
                         <Row>
@@ -251,4 +292,4 @@ const ModalProject = () => {
     );
 };
 
-export default ModalProject;
+export default ModalUser;
