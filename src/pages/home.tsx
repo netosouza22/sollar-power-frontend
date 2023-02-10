@@ -2,7 +2,7 @@ import Layout from '@/components/base/Layout';
 import TableProject from '@/components/Tables/TableProject';
 import { AuthContext } from '@/_contexts/authContext';
 import { useRouter } from 'next/router';
-import { useContext, useEffect } from 'react';
+import { useContext, useEffect, useState } from 'react';
 
 type Project = {
     client_cellphone: string;
@@ -21,13 +21,26 @@ type Project = {
 
 const Home = () => {
     const router = useRouter();
+    const [isLoading, setIsLoading] = useState(true);
     const { isAuthenticated } = useContext(AuthContext);
 
     useEffect(() => {
-        if (!isAuthenticated) {
-            router.replace('/login');
-        }
-    }, [isAuthenticated, router]);
+        const verifyAccess = () => {
+            if (isAuthenticated) {
+                router.push('/home');
+                setIsLoading(false);
+            } else {
+                router.push('/login');
+            }
+        };
+
+        verifyAccess();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isAuthenticated]);
+
+    if (isLoading) {
+        return <div></div>;
+    }
 
     return (
         <Layout>
