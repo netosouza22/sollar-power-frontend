@@ -1,12 +1,8 @@
+import { FormDataLogin } from '@/@types/forms';
 import { api } from '@/services/api';
 import { useRouter } from 'next/router';
 import { destroyCookie, parseCookies, setCookie } from 'nookies';
 import { createContext, useEffect, useState } from 'react';
-
-type Login = {
-    email: string;
-    password: string;
-};
 
 type UserInfo = {
     id: string;
@@ -21,7 +17,7 @@ type ResponseLogin = {
 type AuthContextType = {
     isAuthenticated: boolean;
     userInfo: UserInfo | null;
-    signIn: (data: Login) => Promise<boolean>;
+    signIn: (data: FormDataLogin) => Promise<boolean>;
     logout: () => void;
 };
 
@@ -37,13 +33,12 @@ export function AuthProvider({ children }: any) {
     useEffect(() => {
         const checkToken = () => {
             const { auth_token } = parseCookies();
-            console.log('🚀 ~ file: authContext.tsx:40 ~ checkToken ~ auth_token', auth_token);
-
-            api.get('/checkAuth')
-                .then((res) => setUserInfo(res.data.user))
-                .catch((err) => router.push('/login'));
 
             if (!!auth_token) {
+                api.get('/checkAuth')
+                    .then((res) => setUserInfo(res.data.user))
+                    .catch((err) => router.push('/login'));
+
                 router.push(router.pathname);
                 setIsAuthenticated(true);
                 setIsLoading(false);
@@ -57,7 +52,7 @@ export function AuthProvider({ children }: any) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    const signIn = async ({ email, password }: Login) => {
+    const signIn = async ({ email, password }: FormDataLogin) => {
         const response: ResponseLogin = await api
             .post('/login', {
                 email,
