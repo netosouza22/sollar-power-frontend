@@ -1,3 +1,5 @@
+@import '../../../styles/variables';
+
 .header {
     display: flex;
     justify-content: space-between;
@@ -13,7 +15,17 @@
             justify-content: center;
             align-items: center;
             flex-direction: row;
-            gap: 20px;
+            gap: 30px;
+            margin: 0px;
+
+            a {
+                text-decoration: none;
+                color: black;
+            }
+            a:hover {
+                transform: scale(0.2);
+                color: $primary-color;
+            }
         }
     }
 }
