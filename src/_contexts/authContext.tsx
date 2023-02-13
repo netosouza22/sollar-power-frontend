@@ -1,4 +1,5 @@
 import { FormDataLogin } from '@/@types/forms';
+import { ResponseLogin } from '@/@types/response';
 import { api } from '@/services/api';
 import { useRouter } from 'next/router';
 import { destroyCookie, parseCookies, setCookie } from 'nookies';
@@ -8,12 +9,6 @@ type UserInfo = {
     id: string;
     name: string;
 };
-
-type ResponseLogin = {
-    user: UserInfo;
-    token: string;
-};
-
 type AuthContextType = {
     isAuthenticated: boolean;
     userInfo: UserInfo | null;
@@ -37,7 +32,7 @@ export function AuthProvider({ children }: any) {
             if (!!auth_token) {
                 api.get('/checkAuth')
                     .then((res) => setUserInfo(res.data.user))
-                    .catch((err) => router.push('/login'));
+                    .catch((err) => router.push('/'));
 
                 router.push(router.pathname);
                 setIsAuthenticated(true);
@@ -59,6 +54,17 @@ export function AuthProvider({ children }: any) {
                 password,
             })
             .then((res) => {
+                const {
+                    data: { token },
+                } = res;
+
+                setCookie(null, 'auth_token', token, {
+                    maxAge: 3600,
+                    sameSite: 'lax',
+                });
+
+                api.defaults.headers.Authorization = `Bearer ${token}`;
+
                 return res.data;
             })
             .catch(() => {
@@ -66,20 +72,14 @@ export function AuthProvider({ children }: any) {
             });
 
         if (!response) {
-            return response;
+            return false;
         }
 
         setIsAuthenticated(true);
         setUserInfo(response.user);
         setIsLoading(false);
 
-        setCookie(null, 'auth_token', response.token, {
-            maxAge: 3600,
-            sameSite: 'lax',
-        });
-
         router.push('/home');
-
         return true;
     };
 
@@ -90,10 +90,10 @@ export function AuthProvider({ children }: any) {
             destroyCookie(null, 'auth_token');
             setIsAuthenticated(false);
             setIsLoading(false);
-            router.push('/login');
+            router.push('/');
         }
 
-        router.push('/login');
+        router.push('/');
     };
 
     if (isLoading) {
