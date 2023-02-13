@@ -90,7 +90,6 @@ export function AuthProvider({ children }: any) {
             destroyCookie(null, 'auth_token');
             setIsAuthenticated(false);
             setIsLoading(false);
-            router.push('/');
         }
 
         router.push('/');
