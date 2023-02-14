@@ -1,19 +1,9 @@
 import Layout from '@/components/base/Layout';
 import TableUser from '@/components/Tables/TableUser';
-import { AuthContext } from '@/_contexts/authContext';
-import { useRouter } from 'next/router';
-import { useContext, useEffect } from 'react';
+import { GetServerSideProps } from 'next';
+import { parseCookies } from 'nookies';
 
 const Users = () => {
-    const router = useRouter();
-    const { isAuthenticated } = useContext(AuthContext);
-
-    useEffect(() => {
-        if (!isAuthenticated) {
-            router.replace('/login');
-        }
-    }, [isAuthenticated, router]);
-
     return (
         <Layout>
             <main>
@@ -21,6 +11,24 @@ const Users = () => {
             </main>
         </Layout>
     );
+};
+
+export const getServerSideProps: GetServerSideProps = async (ctx) => {
+    const { auth_token } = parseCookies(ctx);
+
+    if (!auth_token) {
+        return {
+            redirect: {
+                destination: '/',
+                permanent: false,
+            },
+        };
+    }
+    return {
+        props: {
+            // data: cookies;
+        },
+    };
 };
 
 export default Users;
