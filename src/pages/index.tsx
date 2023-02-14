@@ -4,20 +4,18 @@ import styles from '@/styles/pages/login.module.scss';
 import { AuthContext } from '@/_contexts/authContext';
 import { yupResolver } from '@hookform/resolvers/yup';
 import Image from 'next/image';
-import { useRouter } from 'next/router';
-import { useContext, useEffect, useState } from 'react';
+import { useContext } from 'react';
 import { Col, Container, Form, Row } from 'react-bootstrap';
 import { SubmitHandler, useForm } from 'react-hook-form';
 import { toast } from 'react-toastify';
 
-import { schemaLogin } from '@/utils/schemas';
-
 import { FormDataLogin } from '@/@types/forms';
+import { schemaLogin } from '@/utils/schemas';
+import { GetServerSideProps } from 'next';
+import { parseCookies } from 'nookies';
 
 const Login = () => {
-    const router = useRouter();
-    const [isLoading, setIsLoading] = useState(true);
-    const { signIn, isAuthenticated } = useContext(AuthContext);
+    const { signIn } = useContext(AuthContext);
 
     const {
         register,
@@ -27,22 +25,8 @@ const Login = () => {
         resolver: yupResolver(schemaLogin),
     });
 
-    useEffect(() => {
-        const verifyAccess = () => {
-            if (isAuthenticated) {
-                setIsLoading(false);
-                router.push('/home');
-            } else {
-                setIsLoading(false);
-                router.push('/');
-            }
-        };
-
-        verifyAccess();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isAuthenticated]);
-
     const onSubmit: SubmitHandler<FormDataLogin> = async (data: FormDataLogin) => {
+        console.log('🚀 ~ file: index.tsx:53 ~ constonSubmit:SubmitHandler<FormDataLogin>= ~ data', data);
         const userLogged = await signIn(data);
 
         if (!userLogged) {
@@ -51,10 +35,6 @@ const Login = () => {
             });
         }
     };
-
-    if (isLoading) {
-        return <div></div>;
-    }
 
     return (
         <div className={styles.login__page}>
@@ -103,6 +83,24 @@ const Login = () => {
             </div>
         </div>
     );
+};
+
+export const getServerSideProps: GetServerSideProps = async (ctx) => {
+    const { auth_token } = parseCookies(ctx);
+
+    if (auth_token) {
+        return {
+            redirect: {
+                destination: '/home',
+                permanent: false,
+            },
+        };
+    }
+    return {
+        props: {
+            // data: cookies;
+        },
+    };
 };
 
 export default Login;
