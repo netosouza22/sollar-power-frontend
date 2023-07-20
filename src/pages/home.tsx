@@ -1,7 +1,6 @@
 import Layout from '@/components/base/Layout';
 import TableProject from '@/components/Tables/TableProject';
 import { GetServerSideProps } from 'next';
-import { useRouter } from 'next/router';
 import { parseCookies } from 'nookies';
 
 // type Project = {
@@ -19,31 +18,11 @@ import { parseCookies } from 'nookies';
 //     number: number;
 // };
 
-const Home = (props: any) => {
-    // console.log('🚀 ~ file: home.tsx:25 ~ Home ~ props', JSON.stringify(props.data));
-    const router = useRouter();
-    // const [isLoading, setIsLoading] = useState(true);
-    // const { isAuthenticated } = useContext(AuthContext);
+interface IProps {
+    let: string;
+}
 
-    // useEffect(() => {
-    //     const verifyAccess = () => {
-    //         if (isAuthenticated) {
-    //             router.replace(router.pathname);
-    //             setIsLoading(false);
-    //         } else {
-    //             router.push('/');
-    //         }
-    //     };
-
-    //     verifyAccess();
-
-    //     // eslint-disable-next-line react-hooks/exhaustive-deps
-    // }, [isAuthenticated]);
-
-    // if (isLoading) {
-    //     return <div style={{ backgroundColor: 'red', width: '50%' }}>\\\///</div>;
-    // }
-
+export default function Home() {
     return (
         <Layout>
             <main>
@@ -51,9 +30,7 @@ const Home = (props: any) => {
             </main>
         </Layout>
     );
-};
-
-export default Home;
+}
 
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
     const { auth_token } = parseCookies(ctx);
@@ -67,6 +44,8 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
         };
     }
     return {
-        props: {},
+        props: {
+            let: 'a',
+        },
     };
 };

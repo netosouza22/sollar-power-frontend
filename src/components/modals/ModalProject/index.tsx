@@ -1,5 +1,10 @@
+import { FormDataProject } from '@/@types/forms';
+import { ModalProps } from '@/@types/modals';
 import Button from '@/components/base/Button';
+import MessageErrorInfo from '@/components/base/MessageErrorInfo';
 import { api } from '@/services/api';
+import { defaultProjectValues } from '@/utils/defaultValuesRHF';
+import { schemaProject } from '@/utils/schemas';
 import { states } from '@/utils/states';
 import { AuthContext } from '@/_contexts/authContext';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -7,69 +12,23 @@ import axios from 'axios';
 import { FocusEvent, useContext, useEffect } from 'react';
 import { Col, Container, Form, Modal, Row } from 'react-bootstrap';
 import { Controller, SubmitHandler, useForm } from 'react-hook-form';
-// const a from "@/";
 import { IMaskInput } from 'react-imask';
-import * as yup from 'yup';
 
-const schema = yup
-    .object({
-        client_cellphone: yup.string().required('Campo Obrigatório!'),
-        client_name: yup.string().required('Campo Obrigatório!'),
-        company_distribution: yup.string().required('Campo Obrigatório!'),
-        total_potency: yup.number().required('Campo Obrigatório!'),
-        cep: yup.string().required('Campo Obrigatório!'),
-        state: yup.string().required('Campo Obrigatório!'),
-        city: yup.string().required('Campo Obrigatório!'),
-        neighborhood: yup.string().required('Campo Obrigatório!'),
-        address: yup.string().required('Campo Obrigatório!'),
-        number: yup.number().typeError('Número inválido!'),
-        file: yup.mixed().test('file', 'Campo arquivo obrigatório!', (value) => {
-            if (value.length > 0) {
-                return true;
-            }
-            return false;
-        }),
-    })
-    .required();
+const ModalProject = ({ showModal, hideModal, handleReload, id, accessType }: ModalProps) => {
+    console.count('modal product');
 
-type FormDataProject = yup.InferType<typeof schema>;
-
-interface ModalProject {
-    id: number | undefined;
-    accessType: string;
-    showModal: boolean;
-    hideModal: () => void;
-    handleReload: () => void;
-}
-
-const defaultProjectValues = {
-    client_cellphone: '',
-    client_name: '',
-    company_distribution: '',
-    total_potency: 0,
-    cep: '',
-    state: '',
-    city: '',
-    neighborhood: '',
-    address: '',
-    number: 0,
-    file: '',
-};
-
-const ModalProject = ({ showModal, hideModal, handleReload, id, accessType }: ModalProject) => {
     const { userInfo } = useContext(AuthContext);
-    console.log('🚀 ~ file: index.tsx:61 ~ ModalProject ~ userInfo', userInfo);
-
     const {
         reset,
         register,
         handleSubmit,
         control,
         setValue,
+        trigger,
         formState: { errors },
     } = useForm<FormDataProject>({
         mode: 'all',
-        resolver: yupResolver(schema),
+        resolver: yupResolver(schemaProject),
         defaultValues: {
             ...defaultProjectValues,
         },
@@ -80,7 +39,6 @@ const ModalProject = ({ showModal, hideModal, handleReload, id, accessType }: Mo
             api.get(`/projects/${id}`)
                 .then((res) => {
                     reset(res.data.project);
-                    console.log(res.data);
                 })
                 .catch((err) => console.log(err));
         };
@@ -106,6 +64,8 @@ const ModalProject = ({ showModal, hideModal, handleReload, id, accessType }: Mo
             setValue('city', response.data.localidade);
             setValue('neighborhood', response.data.bairro);
             setValue('address', response.data.logradouro);
+
+            trigger(['state', 'city', 'neighborhood', 'address']);
         } catch (err) {}
     };
 
@@ -176,6 +136,7 @@ const ModalProject = ({ showModal, hideModal, handleReload, id, accessType }: Mo
                                     id="company_distribution"
                                     aria-describedby="passwordHelpBlock"
                                 />
+                                <MessageErrorInfo errorMessage={errors.company_distribution?.message}></MessageErrorInfo>
                             </Col>
                             <Col className="my-1">
                                 <Form.Label htmlFor="total_potency">Potência Total em Volts</Form.Label>
@@ -189,12 +150,21 @@ const ModalProject = ({ showModal, hideModal, handleReload, id, accessType }: Mo
                                     id="total_potency"
                                     aria-describedby="passwordHelpBlock"
                                 />
+                                <MessageErrorInfo errorMessage={errors.total_potency?.message}></MessageErrorInfo>
                             </Col>
                         </Row>
                         <Row className="my-1">
                             <Col>
                                 <Form.Label htmlFor="file">Arquivo do Projeto</Form.Label>
-                                <Form.Control {...register('file')} className={`${errors.file ? 'is-invalid' : ''}`} autoComplete="off" type="file" id="file" aria-describedby="file" />
+                                <Form.Control
+                                    {...register('file')}
+                                    className={`${errors.file ? 'is-invalid' : ''}`}
+                                    autoComplete="off"
+                                    type="file"
+                                    id="file"
+                                    aria-describedby="file"
+                                />
+                                {/* <MessageErrorInfo errorMessage={errors.file?.message}></MessageErrorInfo> */}
                             </Col>
                         </Row>
                         <Row>
@@ -208,6 +178,7 @@ const ModalProject = ({ showModal, hideModal, handleReload, id, accessType }: Mo
                                     id="client_name"
                                     aria-describedby="passwordHelpBlock"
                                 />
+                                <MessageErrorInfo errorMessage={errors.client_name?.message}></MessageErrorInfo>
                             </Col>
                             <Col className="my-1">
                                 <Form.Label htmlFor="client_cellphone">N° do Cliente</Form.Label>
@@ -215,7 +186,11 @@ const ModalProject = ({ showModal, hideModal, handleReload, id, accessType }: Mo
                                 <Controller
                                     control={control}
                                     name="client_cellphone"
-                                    render={({ field: { onChange, onBlur, value, name, ref }, fieldState: { invalid, isTouched, isDirty, error }, formState }) => (
+                                    render={({
+                                        field: { onChange, onBlur, value, name, ref },
+                                        fieldState: { invalid, isTouched, isDirty, error },
+                                        formState,
+                                    }) => (
                                         <Form.Control
                                             as={IMaskInput}
                                             mask="(00) 00000-0000"
@@ -228,6 +203,7 @@ const ModalProject = ({ showModal, hideModal, handleReload, id, accessType }: Mo
                                         />
                                     )}
                                 />
+                                <MessageErrorInfo errorMessage={errors.client_cellphone?.message}></MessageErrorInfo>
                             </Col>
                         </Row>
                         <Row>
@@ -250,10 +226,17 @@ const ModalProject = ({ showModal, hideModal, handleReload, id, accessType }: Mo
                                         />
                                     )}
                                 />
+                                <MessageErrorInfo errorMessage={errors.cep?.message}></MessageErrorInfo>
                             </Col>
                             <Col className="my-1" xs={3}>
                                 <Form.Label htmlFor="state">Estado</Form.Label>
-                                <Form.Select {...register('state')} className={`${errors.state ? 'is-invalid' : ''}`} autoComplete="off" id="state" aria-describedby="passwordHelpBlock">
+                                <Form.Select
+                                    {...register('state')}
+                                    className={`${errors.state ? 'is-invalid' : ''}`}
+                                    autoComplete="off"
+                                    id="state"
+                                    aria-describedby="passwordHelpBlock"
+                                >
                                     {states.map((state) => {
                                         return (
                                             <option key={state.value} value={state.value}>
@@ -262,10 +245,19 @@ const ModalProject = ({ showModal, hideModal, handleReload, id, accessType }: Mo
                                         );
                                     })}
                                 </Form.Select>
+                                <MessageErrorInfo errorMessage={errors.state?.message}></MessageErrorInfo>
                             </Col>
                             <Col className="my-1" xs={6}>
                                 <Form.Label htmlFor="city">Cidade</Form.Label>
-                                <Form.Control {...register('city')} autoComplete="off" className={`${errors.city ? 'is-invalid' : ''}`} type="text" id="city" aria-describedby="passwordHelpBlock" />
+                                <Form.Control
+                                    {...register('city')}
+                                    autoComplete="off"
+                                    className={`${errors.city ? 'is-invalid' : ''}`}
+                                    type="text"
+                                    id="city"
+                                    aria-describedby="passwordHelpBlock"
+                                />
+                                <MessageErrorInfo errorMessage={errors.city?.message}></MessageErrorInfo>
                             </Col>
                         </Row>
                         <Row>
@@ -279,6 +271,7 @@ const ModalProject = ({ showModal, hideModal, handleReload, id, accessType }: Mo
                                     id="neighborhood"
                                     aria-describedby="passwordHelpBlock"
                                 />
+                                <MessageErrorInfo errorMessage={errors.neighborhood?.message}></MessageErrorInfo>
                             </Col>
                             <Col className="my-1">
                                 <Form.Label htmlFor="address">Rua</Form.Label>
@@ -290,6 +283,7 @@ const ModalProject = ({ showModal, hideModal, handleReload, id, accessType }: Mo
                                     id="address"
                                     aria-describedby="passwordHelpBlock"
                                 />
+                                <MessageErrorInfo errorMessage={errors.address?.message}></MessageErrorInfo>
                             </Col>
                             <Col className="my-1">
                                 <Form.Label htmlFor="number">Número</Form.Label>
@@ -302,6 +296,7 @@ const ModalProject = ({ showModal, hideModal, handleReload, id, accessType }: Mo
                                     id="number"
                                     aria-describedby="passwordHelpBlock"
                                 />
+                                <MessageErrorInfo errorMessage={errors.number?.message}></MessageErrorInfo>
                             </Col>
                         </Row>
                     </Container>

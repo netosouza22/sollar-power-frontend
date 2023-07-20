@@ -7,15 +7,18 @@
     cursor: pointer;
 }
 
-.button:hover {
-    transform: scale(1.05);
-}
-
 .lg__button {
     font-size: 1.1rem;
     min-width: 64px;
     max-width: 200px;
     padding: 5px 15px;
+}
+
+.md__button {
+    font-size: 1.1rem;
+    min-width: 45px;
+    max-width: 200px;
+    padding: 3px 10px;
 }
 
 .bg__none__button {
@@ -24,4 +27,7 @@
 
 .bg__normal__button {
     background-color: $primary-color;
+}
+.bg__normal__button:hover {
+    background-color: $secondary-color;
 }

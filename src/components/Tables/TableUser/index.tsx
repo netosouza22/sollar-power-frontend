@@ -1,18 +1,16 @@
 import deleteIcon from '@/assets/icons/delete.svg';
 import editIcon from '@/assets/icons/edit.svg';
+import eyePlusIcon from '@/assets/icons/eye-plus.svg';
 import Button from '@/components/base/Button';
 import ModalUser from '@/components/modals/ModalUser';
 import { api } from '@/services/api';
 import { states } from '@/utils/states';
+import { Backdrop } from '@mui/material';
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useCallback, useEffect, useState } from 'react';
 import { Form } from 'react-bootstrap';
 import styles from '../table.module.scss';
-
-type ModalPropHandle = {
-    id: number;
-    accessTypeModal: string;
-};
 
 type Users = {
     id: number;
@@ -31,6 +29,7 @@ type Users = {
 
 const TableUser = () => {
     const [showModal, setShowModal] = useState(false);
+    console.log('🚀 ~ file: index.tsx:32 ~ TableUser ~ showModal', showModal);
     const [idProject, setIdProject] = useState<number>(-1);
     const [accessType, setAccessType] = useState('create');
     const [filter, setFilter] = useState('');
@@ -53,15 +52,11 @@ const TableUser = () => {
         getUsers();
     }, [reload]);
 
-    const hideUserModal = () => {
-        setShowModal(false);
-    };
-
     const handleReload = () => {
         setReload((s) => !s);
     };
 
-    const handleFilter = () => {
+    const filterUsers = () => {
         const filteredProjects = allUsers?.filter((item) => {
             return item.state === filter;
         });
@@ -82,16 +77,23 @@ const TableUser = () => {
             .catch((err) => console.log(err));
     };
 
-    const handleShowModalUser = (id: number, accessTypeModal: string) => {
-        console.log('🚀 ~ file: index.tsx:86 ~ handleShowModalUser ~ id', id);
+    const handleShowModalUser = useCallback((id: number, accessTypeModal: string) => {
         setIdProject(id);
         setAccessType(accessTypeModal);
         setShowModal(true);
+    }, []);
+
+    const handleHideModal = () => {
+        setShowModal(false);
     };
+
+    if (allUsers.length === 0) {
+        return <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }} open={true} />;
+    }
 
     return (
         <>
-            <ModalUser handleReload={handleReload} showModal={showModal} hideModal={hideUserModal} id={idProject} accessType={accessType} />
+            {showModal && <ModalUser handleReload={handleReload} showModal={showModal} hideModal={handleHideModal} id={idProject} accessType={accessType} />}
 
             <div className={styles.table__container}>
                 <header className={styles.t__container__header}>
@@ -112,7 +114,7 @@ const TableUser = () => {
                             </Form.Select>
 
                             <div className={styles.t__filter__buttons}>
-                                <Button size="md" onClick={handleFilter}>
+                                <Button size="md" onClick={filterUsers}>
                                     Filtrar
                                 </Button>
                                 <Button size="md" onClick={resetFilter}>
@@ -143,15 +145,24 @@ const TableUser = () => {
                     <tbody>
                         {users?.map((item: Users) => {
                             return (
+                                // <Link key={item.id} href="/home">
                                 <tr key={item.id} className={styles.table__tr}>
                                     <td className={styles.table__td}>{item.name}</td>
                                     <td className={styles.table__td}>{item.email}</td>
                                     <td className={styles.table__td}>{item.cpf}</td>
                                     <td className={styles.table__td}>{item.cellphone}</td>
-                                    <td className={styles.table__td}>{item.city}</td>
+                                    <td className={styles.table__td}>{item.state}</td>
                                     <td className={styles.table__td}>{item.city}</td>
                                     <td className={styles.table__td}>
                                         <div className={styles.td__group__button}>
+                                            <Button
+                                                bg="none"
+                                                // onClick={() => handleDeleteUser(Number(item.id))}
+                                            >
+                                                <Link href={`/user/${encodeURIComponent(item.id)}`}>
+                                                    <Image src={eyePlusIcon} alt="delete icon" width={30} height={30}></Image>
+                                                </Link>
+                                            </Button>
                                             <Button bg="none" onClick={() => handleDeleteUser(Number(item.id))}>
                                                 <Image src={deleteIcon} alt="delete icon" width={30} height={30}></Image>
                                             </Button>
@@ -161,6 +172,7 @@ const TableUser = () => {
                                         </div>
                                     </td>
                                 </tr>
+                                // </Link>
                             );
                         })}
                     </tbody>
@@ -171,3 +183,14 @@ const TableUser = () => {
 };
 
 export default TableUser;
+
+// export async function getStaticPaths() {
+//     // Return a list of possible value for id
+// }
+
+// export const getStaticProps: GetStaticProps = async () => {
+//     return {
+//         props: {},
+//         revalidate: 60 * 60 * 1,
+//     };
+// };

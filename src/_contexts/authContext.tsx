@@ -28,11 +28,17 @@ export function AuthProvider({ children }: any) {
     useEffect(() => {
         const checkToken = () => {
             const { auth_token } = parseCookies();
+            // console.log('🚀 ~ file: authContext.tsx:31 ~ checkToken ~ auth_token', auth_token);
 
             if (!!auth_token) {
                 api.get('/checkAuth')
                     .then((res) => setUserInfo(res.data.user))
-                    .catch((err) => router.push('/'));
+                    .catch((err) => {
+                        if (err.response.status === 401 || err.response.status === 403) {
+                            logout();
+                            return;
+                        }
+                    });
 
                 router.push(router.pathname);
                 setIsAuthenticated(true);
@@ -77,9 +83,8 @@ export function AuthProvider({ children }: any) {
 
         setIsAuthenticated(true);
         setUserInfo(response.user);
-        setIsLoading(false);
-
         router.push('/home');
+
         return true;
     };
 
@@ -89,14 +94,13 @@ export function AuthProvider({ children }: any) {
         if (!!auth_token) {
             destroyCookie(null, 'auth_token');
             setIsAuthenticated(false);
-            setIsLoading(false);
         }
 
         router.push('/');
     };
 
     if (isLoading) {
-        return <div></div>;
+        return <div>Loading...</div>;
     }
 
     return <AuthContext.Provider value={{ userInfo, isAuthenticated, logout, signIn }}>{children}</AuthContext.Provider>;
